@@ -5,22 +5,20 @@ use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
 use winapi::shared::windef::HHOOK;
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::winuser::{
-    CallNextHookEx, INPUT_u, SendInput, SetWindowsHookExW, INPUT, INPUT_KEYBOARD, KBDLLHOOKSTRUCT,
-    KEYBDINPUT, KEYEVENTF_KEYUP, LLKHF_ALTDOWN, LLKHF_EXTENDED, LLKHF_INJECTED,
-    LLKHF_LOWER_IL_INJECTED, LLKHF_UP, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP,
+    CallNextHookEx, SendInput, SetWindowsHookExW, INPUT, INPUT_KEYBOARD, KBDLLHOOKSTRUCT,
+    KEYEVENTF_KEYUP, LLKHF_ALTDOWN, LLKHF_EXTENDED, LLKHF_INJECTED, LLKHF_LOWER_IL_INJECTED,
+    LLKHF_UP, WH_KEYBOARD_LL,
 };
 
 static mut h_hook: HHOOK = ptr::null_mut();
 
 struct KeyEvent {
     raw: KBDLLHOOKSTRUCT,
-    wp: u32,
 }
 
 impl KeyEvent {
-    pub fn new(raw: KBDLLHOOKSTRUCT, wp: WPARAM) -> Self {
-        Self { raw, wp: wp as u32 }
+    pub fn new(raw: KBDLLHOOKSTRUCT) -> Self {
+        Self { raw }
     }
 
     pub fn vk_code(&self) -> u32 {
@@ -50,22 +48,6 @@ impl KeyEvent {
     pub fn is_up(&self) -> bool {
         self.raw.flags & LLKHF_UP > 0
     }
-
-    pub fn is_keydown(&self) -> bool {
-        self.wp == WM_KEYDOWN
-    }
-
-    pub fn is_syskeydown(&self) -> bool {
-        self.wp == WM_SYSKEYDOWN
-    }
-
-    pub fn is_keyup(&self) -> bool {
-        self.wp == WM_KEYUP
-    }
-
-    pub fn is_syskeyup(&self) -> bool {
-        self.wp == WM_SYSKEYUP
-    }
 }
 
 impl fmt::Debug for KeyEvent {
@@ -78,10 +60,6 @@ impl fmt::Debug for KeyEvent {
             .field("injected", &self.is_injected())
             .field("altdown", &self.is_altdown())
             .field("up", &self.is_up())
-            .field("keydown", &self.is_keydown())
-            .field("keyup", &self.is_keyup())
-            .field("syskeydown", &self.is_syskeydown())
-            .field("syskeyup", &self.is_syskeyup())
             .finish()
     }
 }
@@ -89,16 +67,13 @@ impl fmt::Debug for KeyEvent {
 #[no_mangle]
 pub unsafe extern "system" fn handler(code: c_int, wp: WPARAM, lp: LPARAM) -> LRESULT {
     if let Some(mut k) = ptr::NonNull::new(lp as *mut KBDLLHOOKSTRUCT) {
-        let event = KeyEvent::new(*k.as_mut(), wp);
+        let event = KeyEvent::new(*k.as_mut());
         if !event.is_injected() && event.vk_code() == 0x38 {
             let mut input = INPUT::default();
             input.type_ = INPUT_KEYBOARD;
             let mut ki = input.u.ki_mut();
             ki.wVk = 0x39;
-            ki.dwFlags = match (wp as u32) {
-                WM_KEYDOWN | WM_SYSKEYDOWN => 0,
-                _ => KEYEVENTF_KEYUP,
-            };
+            ki.dwFlags = if event.is_up() { KEYEVENTF_KEYUP } else { 0 };
 
             SendInput(1, &mut input, std::mem::size_of::<INPUT>() as c_int);
             return -1;
