@@ -13,12 +13,12 @@ impl KeyEvent {
         Self { raw }
     }
 
-    pub fn vk_code(&self) -> u32 {
-        self.raw.vkCode
+    pub fn vk_code(&self) -> u16 {
+        self.raw.vkCode as u16
     }
 
-    pub fn scan_code(&self) -> u32 {
-        self.raw.scanCode
+    pub fn scan_code(&self) -> u16 {
+        self.raw.scanCode as u16
     }
 
     pub fn is_extended(&self) -> bool {
