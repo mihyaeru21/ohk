@@ -53,18 +53,10 @@ pub unsafe extern "system" fn handler(code: c_int, wp: WPARAM, lp: LPARAM) -> LR
 
         // alt は自前のイベントで上書きしておかないと up を書き換えたときに押しっぱなし判定になってしまう
         if !event.is_injected() {
-            match event.vk_code() {
-                0xa4 => {
-                    let inputs = vec![create_input(0xa4, event.is_up())];
-                    send_inputs(inputs);
-                    return -1;
-                }
-                0xa5 => {
-                    let inputs = vec![create_input(config::OHK_META, event.is_up())];
-                    send_inputs(inputs);
-                    return -1;
-                }
-                _ => {}
+            if let Some(mapped_code) = config::simple_map(event.vk_code()) {
+                let inputs = vec![create_input(mapped_code, event.is_up())];
+                send_inputs(inputs);
+                return -1;
             }
         }
 

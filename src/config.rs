@@ -44,6 +44,15 @@ impl Event {
 }
 
 // TODO: rename
+pub fn simple_map(code: u16) -> Option<u16> {
+    match code {
+        LEFT_ALT => Some(LEFT_ALT), // 自前のイベントで上書きしておかないと up を書き換えたときに押しっぱなし判定になってしまう
+        RIGHT_ALT => Some(OHK_META),
+        _ => None,
+    }
+}
+
+// TODO: rename
 pub fn just_down_up(code: u16) -> Option<Vec<Event>> {
     match code {
         // OHK_META: OHK_META のあとに変換
