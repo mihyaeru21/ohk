@@ -4,7 +4,7 @@ use crate::config;
 use key_event::KeyEvent;
 use std::os::raw::c_int;
 use std::ptr;
-use winapi::shared::minwindef::{LPARAM, LRESULT, WORD, WPARAM};
+use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
 use winapi::shared::windef::HHOOK;
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::winuser::{
@@ -15,6 +15,7 @@ use winapi::um::winuser::{
 static mut H_HOOK: HHOOK = ptr::null_mut();
 static mut LAST_EVENT: Option<KeyEvent> = None;
 static mut SENDING_SAME_KEY: bool = false;
+static mut OHK_META_PRESSED: bool = false;
 
 pub fn register_hook() {
     unsafe {
@@ -51,9 +52,19 @@ pub unsafe extern "system" fn handler(code: c_int, wp: WPARAM, lp: LPARAM) -> LR
     if let Some(mut k) = ptr::NonNull::new(lp as *mut KBDLLHOOKSTRUCT) {
         let event = KeyEvent::new(*k.as_mut());
 
-        // alt は自前のイベントで上書きしておかないと up を書き換えたときに押しっぱなし判定になってしまう
+        // 単一キーを別のキーにマッピングする挙動
+        // このときだけは injected なイベントはスルーする
         if !event.is_injected() {
             if let Some(mapped_code) = config::simple_map(event.vk_code()) {
+                let inputs = vec![create_input(mapped_code, event.is_up())];
+                send_inputs(inputs);
+                return -1;
+            }
+        }
+
+        // OHK_META キーとの組み合わせによる挙動
+        if !SENDING_SAME_KEY && OHK_META_PRESSED {
+            if let Some(mapped_code) = config::simple_map_with_meta(event.vk_code()) {
                 let inputs = vec![create_input(mapped_code, event.is_up())];
                 send_inputs(inputs);
                 return -1;
@@ -87,6 +98,10 @@ pub unsafe extern "system" fn handler(code: c_int, wp: WPARAM, lp: LPARAM) -> LR
             "debug({:?}): hoge: {:?}, {:?}",
             thread_id, SENDING_SAME_KEY, event
         );
+
+        if event.vk_code() == config::OHK_META {
+            OHK_META_PRESSED = !event.is_up();
+        }
 
         LAST_EVENT = Some(event);
     }
