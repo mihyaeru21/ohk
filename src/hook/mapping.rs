@@ -72,7 +72,8 @@ pub fn map_on_up(code: u16, state: &State) -> Option<Vec<Event>> {
             }
         }
         // left alt: left alt のあとに無変換
-        //           undefined を挟むことでメニューにカーソルが吸われるのを抑制する
+        // undefined を挟むことでメニューにカーソルが吸われるのを抑制する（以下をパクった）
+        // https://github.com/karakaram/alt-ime-ahk/blob/master/alt-ime-ahk.ahk#L110
         keys::LEFT_ALT => {
             if state.just_down_up {
                 Some(vec![
