@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 winapi = { version = "0.3", features = ["winuser", "libloaderapi", "minwindef", "windef", "impl-default"] }
 nwg = { version = "^1.0.10", package = "native-windows-gui" }
+log = "^0.4.0"
+env_logger = "^0.8.0"
