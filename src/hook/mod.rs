@@ -7,12 +7,17 @@ use key_event::KeyEvent;
 use state::State;
 use std::os::raw::c_int;
 use std::ptr;
-use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
-use winapi::shared::windef::HHOOK;
-use winapi::um::libloaderapi::GetModuleHandleW;
-use winapi::um::winuser::{
-    CallNextHookEx, SendInput, SetWindowsHookExW, INPUT, INPUT_KEYBOARD, KBDLLHOOKSTRUCT,
-    KEYEVENTF_KEYUP, WH_KEYBOARD_LL,
+use winapi::{
+    shared::minwindef::{LPARAM, LRESULT, WPARAM},
+    shared::windef::HHOOK,
+    um::{
+        errhandlingapi::GetLastError,
+        libloaderapi::GetModuleHandleW,
+        winuser::{
+            CallNextHookEx, SendInput, SetWindowsHookExW, UnhookWindowsHookEx, INPUT,
+            INPUT_KEYBOARD, KBDLLHOOKSTRUCT, KEYEVENTF_KEYUP, WH_KEYBOARD_LL,
+        },
+    },
 };
 
 // 全体的には以下を参考にして作った
@@ -34,14 +39,24 @@ pub fn register_hook() {
         let instance = GetModuleHandleW(ptr::null());
         H_HOOK = SetWindowsHookExW(WH_KEYBOARD_LL, Some(handler), instance, 0);
         if H_HOOK == ptr::null_mut() {
-            panic!("failed to set hook!");
+            panic!("failed to register hook!");
         }
     }
 }
 
-// TODO: unhook
 // UnhookWindowsHookEx
 // https://docs.microsoft.com/ja-jp/windows/win32/api/winuser/nf-winuser-unhookwindowshookex
+pub fn unregister_hook() {
+    unsafe {
+        if H_HOOK != ptr::null_mut() {
+            let ret = UnhookWindowsHookEx(H_HOOK);
+            if ret == 0 {
+                let code = GetLastError();
+                panic!(format!("failed to unregister hook! code: {:?}", code));
+            }
+        }
+    }
+}
 
 // INPUT については以下を参照
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-input

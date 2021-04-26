@@ -102,4 +102,5 @@ fn main() {
     hook::register_hook();
     println!("waiting...");
     nwg::dispatch_thread_events();
+    hook::unregister_hook();
 }
