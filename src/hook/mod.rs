@@ -128,7 +128,7 @@ pub unsafe extern "system" fn handler(code: c_int, wp: WPARAM, lp: LPARAM) -> LR
             }
         }
 
-        println!("debug: {:?}", event);
+        log::info!("{:?}", event);
 
         STATE.update(event);
     }
