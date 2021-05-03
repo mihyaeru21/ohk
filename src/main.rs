@@ -1,8 +1,8 @@
 mod hook;
+mod ui;
 
 fn main() {
-    nwg::init().expect("oops!");
     hook::register_hook();
-    println!("waiting...");
-    nwg::dispatch_thread_events();
+    ui::run();
+    hook::unregister_hook();
 }
